@@ -1,0 +1,4 @@
+/* Dashboard.module.css */
+.layout {display:flex; height:100vh; overflow:hidden;}
+.content {flex:1; padding:1.5rem 2.5rem; overflow-y:auto;}
+.body {display:flex; gap:3rem;}

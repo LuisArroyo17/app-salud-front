@@ -1,0 +1,44 @@
+/* AppointmentsTimeline.module.css */
+.timeline {
+    position:relative; 
+    margin-left:80px;}
+.timeline::before {
+    content:''; 
+    position:absolute; 
+    left:75px; top:0; 
+    bottom:0; 
+    width:2px; 
+    background:#444;}
+.item {
+    display:flex; 
+    gap:1rem; 
+    align-items:flex-start; 
+    margin-bottom:1.2rem;}
+.time {
+    width:55px; 
+    text-align:right; 
+    font-size:.8rem; 
+    color:#555;}
+.dot {
+    width:10px; 
+    height:10px; 
+    border-radius:50%; 
+    background:#444; 
+    margin-top:.25rem;}
+.card {
+    background:#fff; 
+    border:1px solid #eee; 
+    padding:.5rem .8rem; 
+    border-radius:6px; 
+    flex:1; 
+    position:relative;
+    width:270px
+}
+.badge {
+    position:absolute; 
+    top:.6rem; right:.6rem; 
+    background:#22686f; 
+    color:#fff; 
+    font-size:.7rem; 
+    padding:.2rem .5rem; 
+    border-radius:4px;}

@@ -1,0 +1,26 @@
+/* QuickActions.module.css */
+.card {
+  width: 140px;
+  height: 160px;
+  border: 2px dashed #9dd4de;
+  border-radius: 8px;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.card:hover {
+  background: rgba(41, 141, 166, 0.1);
+  border-color: #298da6;
+}
+
+.card span {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #298da6;
+}
