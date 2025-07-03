@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 const API_URL = import.meta.env.VITE_URL;
 export default function Pacientes({ onLogout, user }) {
   const [showModal, setShowModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [patients, setPatients] = useState([]);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({});
@@ -72,6 +73,8 @@ export default function Pacientes({ onLogout, user }) {
   }, [page, filters]);
 
   const handleCreatePatient = (newPatient) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     fetch(`${API_URL}/api/patient`, {
       method: "POST",
       credentials: "include",
@@ -88,10 +91,14 @@ export default function Pacientes({ onLogout, user }) {
         alert("Paciente registrado con éxito");
         setPage(1);
         setFilters({});
+        setShowModal(false);
       })
       .catch((err) => {
         console.error(err);
         alert("Hubo un error al guardar");
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
   };
 
@@ -174,6 +181,7 @@ export default function Pacientes({ onLogout, user }) {
         <AddPatientModal
           onClose={() => setShowModal(false)}
           onSubmit={handleCreatePatient}
+          isSubmitting={isSubmitting}
         />
       )}
     </>
