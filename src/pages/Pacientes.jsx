@@ -64,8 +64,11 @@ export default function Pacientes({ onLogout, user }) {
             lastVisit: "Hace poco",
           }))
         );
-
-        setTotalPages(1); // Ajusta si tu backend envía este dato
+          if (Array.isArray(data) && data.length === perPage) {
+          setTotalPages(page + 1);
+        } else {
+          setTotalPages(page);
+        }
       })
       .catch((err) => {
         console.error("Error al cargar pacientes:", err);
