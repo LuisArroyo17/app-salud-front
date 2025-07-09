@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar/Sidebar";
 import Pagination from "../components/Patients/Pagination";
 import RecipeModal from "../components/modal/RecipeModal";
 import RecipeCard from "../components/recipe/RecipeCard";
+import { debounce } from "../utils/debounce";
 const API_URL = import.meta.env.VITE_URL;
 export default function Recetas({ onLogout, user }) {
   const [showModal, setShowModal] = useState(false);
@@ -10,6 +11,8 @@ export default function Recetas({ onLogout, user }) {
   const [page, setPage] = useState(1);
   const [error, setError] = useState(null);
   const perPage = 6;
+  const [search, setSearch] = useState("");
+  const [filtered, setFiltered] = useState([]);
 
   const fetchPrescriptions = () => {
     fetch(`${API_URL}/api/prescription`, {
@@ -42,6 +45,27 @@ export default function Recetas({ onLogout, user }) {
   useEffect(() => {
     fetchPrescriptions();
   }, []);
+
+  // Filtro dinámico con debounce
+  const handleSearchInput = debounce((value) => {
+    setSearch(value);
+  }, 400);
+
+  useEffect(() => {
+    if (!search.trim()) {
+      setFiltered(prescriptions);
+    } else {
+      const lower = search.toLowerCase();
+      setFiltered(
+        prescriptions.filter(
+          (r) =>
+            r.patientName.toLowerCase().includes(lower) ||
+            r.patientDni.toLowerCase().includes(lower) ||
+            String(r.id).includes(lower)
+        )
+      );
+    }
+  }, [search, prescriptions]);
 
   const handleCreatePrescription = async (data) => {
     try {
@@ -100,17 +124,18 @@ export default function Recetas({ onLogout, user }) {
               type="text"
               placeholder="Diego Alberto Salazar..."
               className="w-full border rounded p-2"
+              onChange={(e) => handleSearchInput(e.target.value)}
             />
           </div>
           {/* tarjetas de recetas */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {paginated.map((r) => (
+            {filtered.slice((page - 1) * perPage, page * perPage).map((r) => (
               <RecipeCard key={r.id} prescription={r} />
             ))}
           </div>
           <Pagination
             page={page}
-            totalPages={totalPages}
+            totalPages={Math.ceil(filtered.length / perPage)}
             onChange={setPage}
           />
         </main>

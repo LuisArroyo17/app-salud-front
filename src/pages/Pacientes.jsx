@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Sidebar from "../components/Sidebar/Sidebar";
 import FilterPanel from "../components/Patients/FilterPanel";
 import PatientCard from "../components/Patients/PatientCard";
@@ -6,15 +6,18 @@ import Pagination from "../components/Patients/Pagination";
 import RecipeModal from "../components/modal/RecipeModal";
 import AddPatientModal from "../components/modal/AddPatientModal";
 import { useNavigate } from "react-router-dom";
+import { debounce } from "../utils/debounce";
 const API_URL = import.meta.env.VITE_URL;
 export default function Pacientes({ onLogout, user }) {
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [allPatients, setAllPatients] = useState([]);
   const [patients, setPatients] = useState([]);
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({});
   const [totalPages, setTotalPages] = useState(1);
-  const perPage = 6;
+  const perPage = 9;
   const navigate = useNavigate();
 
   function buildUrl() {
@@ -39,9 +42,9 @@ export default function Pacientes({ onLogout, user }) {
   }
 
 
+  // Al inicio, cargar todos los pacientes una sola vez
   useEffect(() => {
-    const url = buildUrl();
-    fetch(url, {
+    fetch(`${API_URL}/api/patient?page=1&limit=10000`, {
       method: "GET",
       credentials: "include",
     })
@@ -53,27 +56,20 @@ export default function Pacientes({ onLogout, user }) {
         return res.json();
       })
       .then((data) => {
-        console.log("✅ Datos recibidos:", data);
-
-        setPatients(
-          (Array.isArray(data) ? data : []).map((p) => ({
-            id: p.patient_id,
-            fullName: p.full_name,
-            age: p.age,
-            gender: p.gender === "M" ? "Masculino" : "Femenino",
-            lastVisit: "Hace poco",
-          }))
-        );
-          if (Array.isArray(data) && data.length === perPage) {
-          setTotalPages(page + 1);
-        } else {
-          setTotalPages(page);
-        }
+        const mapped = (Array.isArray(data) ? data : []).map((p) => ({
+          id: p.patient_id,
+          fullName: p.full_name,
+          age: p.age,
+          gender: p.gender === "M" ? "Masculino" : "Femenino",
+          lastVisit: "Hace poco",
+        }));
+        setAllPatients(mapped);
+        setPatients(mapped);
       })
       .catch((err) => {
         console.error("Error al cargar pacientes:", err);
       });
-  }, [page, filters]);
+  }, []);
 
   const handleCreatePatient = (newPatient) => {
     if (isSubmitting) return;
@@ -122,6 +118,23 @@ export default function Pacientes({ onLogout, user }) {
     setPage(1);
   };
 
+  // Filtro local con debounce
+  const debounceRef = useRef(debounce((value, all) => {
+    const lower = value.toLowerCase();
+    setPatients(
+      all.filter(
+        (p) =>
+          p.fullName.toLowerCase().includes(lower) ||
+          String(p.id).includes(lower)
+      )
+    );
+  }, 400));
+
+  const handleSearchInput = (value) => {
+    setSearch(value);
+    debounceRef.current(value, allPatients);
+  };
+
   return (
     <>
       <div className="flex min-h-screen">
@@ -147,9 +160,8 @@ export default function Pacientes({ onLogout, user }) {
               type="text"
               placeholder="Diego Alberto Salazar..."
               className="w-full border rounded p-2"
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, name: e.target.value }))
-              }
+              value={search}
+              onChange={(e) => handleSearchInput(e.target.value)}
             />
           </div>
 
@@ -161,7 +173,7 @@ export default function Pacientes({ onLogout, user }) {
 
             <section className="flex-1">
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {patients.map((p) => (
+                {patients.slice((page - 1) * perPage, page * perPage).map((p) => (
                   <PatientCard
                     key={p.id}
                     patient={p}
@@ -172,7 +184,7 @@ export default function Pacientes({ onLogout, user }) {
 
               <Pagination
                 page={page}
-                totalPages={totalPages}
+                totalPages={Math.ceil(patients.length / perPage)}
                 onChange={setPage}
               />
             </section>
