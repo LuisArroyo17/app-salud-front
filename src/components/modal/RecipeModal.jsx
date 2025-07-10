@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function RecipeModal({ onClose, onSubmit, user }) {
   const [form, setForm] = useState({
@@ -18,6 +18,40 @@ export default function RecipeModal({ onClose, onSubmit, user }) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [patients, setPatients] = useState([]);
+  const [loadingPatients, setLoadingPatients] = useState(true);
+
+  // Cargar pacientes al abrir el modal
+  useEffect(() => {
+    const API_URL = import.meta.env.VITE_URL;
+    fetch(`${API_URL}/api/patient?page=1&limit=10000`, {
+      method: "GET",
+      credentials: "include",
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Error ${res.status}: ${text}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        const mapped = (Array.isArray(data) ? data : []).map((p) => ({
+          id: p.patient_id,
+          fullName: p.full_name,
+          age: p.age,
+          gender: p.gender === "M" ? "Masculino" : "Femenino",
+        }));
+        setPatients(mapped);
+      })
+      .catch((err) => {
+        console.error("Error al cargar pacientes:", err);
+        setError("Error al cargar la lista de pacientes");
+      })
+      .finally(() => {
+        setLoadingPatients(false);
+      });
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -100,16 +134,27 @@ export default function RecipeModal({ onClose, onSubmit, user }) {
           </div>
         )}
         <div className="mb-4">
-          <label className="block mb-1">ID del Paciente *</label>
-          <input
-            name="patientId"
-            value={form.patientId}
-            onChange={handleChange}
-            placeholder="1"
-            className="w-full border p-2 rounded"
-            type="number"
-            required
-          />
+          <label className="block mb-1">Paciente *</label>
+          {loadingPatients ? (
+            <div className="w-full border p-2 rounded bg-gray-100 text-gray-500">
+              Cargando pacientes...
+            </div>
+          ) : (
+            <select
+              name="patientId"
+              value={form.patientId}
+              onChange={handleChange}
+              className="w-full border p-2 rounded"
+              required
+            >
+              <option value="">Seleccionar paciente</option>
+              {patients.map((patient) => (
+                <option key={patient.id} value={patient.id}>
+                  {patient.fullName} - {patient.age} años ({patient.gender})
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="mb-4">
           <label className="block mb-1">Observaciones generales de la receta</label>

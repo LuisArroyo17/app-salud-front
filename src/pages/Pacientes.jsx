@@ -71,6 +71,115 @@ export default function Pacientes({ onLogout, user }) {
       });
   }, []);
 
+  // Efecto para aplicar filtros del backend (edad y género)
+  useEffect(() => {
+    if (filters.minAge > 0 || filters.maxAge > 0 || filters.gender) {
+      const url = buildUrl();
+      fetch(url, {
+        method: "GET",
+        credentials: "include",
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Error ${res.status}: ${text}`);
+          }
+          return res.json();
+        })
+        .then((data) => {
+          const mapped = (Array.isArray(data) ? data : []).map((p) => ({
+            id: p.patient_id,
+            fullName: p.full_name,
+            age: p.age,
+            gender: p.gender === "M" ? "Masculino" : "Femenino",
+            lastVisit: "Hace poco",
+          }));
+          setAllPatients(mapped);
+          // Aplicar filtro de búsqueda local sobre los resultados del backend
+          if (search && search.trim()) {
+            const lower = search.toLowerCase();
+            const filtered = mapped.filter(
+              (p) =>
+                p.fullName.toLowerCase().includes(lower) ||
+                String(p.id).includes(lower)
+            );
+            setPatients(filtered);
+          } else {
+            setPatients(mapped);
+          }
+        })
+        .catch((err) => {
+          console.error("Error al cargar pacientes:", err);
+        });
+    }
+  }, [filters.minAge, filters.maxAge, filters.gender]);
+
+  // Función para aplicar solo el filtro de búsqueda local
+  const applySearchFilter = (searchText) => {
+    if (!searchText || !searchText.trim()) {
+      setPatients(allPatients);
+    } else {
+      const lower = searchText.toLowerCase();
+      const filtered = allPatients.filter(
+        (p) =>
+          p.fullName.toLowerCase().includes(lower) ||
+          String(p.id).includes(lower)
+      );
+      setPatients(filtered);
+    }
+    setPage(1);
+  };
+
+  // Búsqueda directa sin debounce por ahora
+  const handleSearchInput = (value) => {
+    setSearch(value);
+    applySearchFilter(value);
+  };
+
+  const handleApplyFilters = (data) => {
+    console.log("🧪 Filtros aplicados:", data);
+    setFilters({
+      minAge: data.minAge ?? 0,
+      maxAge: data.maxAge ?? 0,
+      name: data.name ?? "",
+      gender: data.gender ?? "",
+    });
+    setPage(1);
+  };
+
+  const handleClearFilters = () => {
+    console.log("🧹 Filtros limpiados");
+    setFilters({});
+    setSearch("");
+    // Recargar todos los pacientes del backend
+    fetch(`${API_URL}/api/patient?page=1&limit=10000`, {
+      method: "GET",
+      credentials: "include",
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Error ${res.status}: ${text}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        const mapped = (Array.isArray(data) ? data : []).map((p) => ({
+          id: p.patient_id,
+          fullName: p.full_name,
+          age: p.age,
+          gender: p.gender === "M" ? "Masculino" : "Femenino",
+          lastVisit: "Hace poco",
+        }));
+        setAllPatients(mapped);
+        setPatients(mapped);
+      })
+      .catch((err) => {
+        console.error("Error al cargar pacientes:", err);
+      });
+    setPage(1);
+  };
+
   const handleCreatePatient = (newPatient) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -99,40 +208,6 @@ export default function Pacientes({ onLogout, user }) {
       .finally(() => {
         setIsSubmitting(false);
       });
-  };
-
-  const handleApplyFilters = (data) => {
-    console.log("🧪 Filtros aplicados:", data);
-    setFilters({
-      minAge: data.minAge ?? 0,
-      maxAge: data.maxAge ?? 0,
-      name: data.name ?? "",
-      gender: data.gender ?? "",
-    });
-    setPage(1);
-  };
-
-  const handleClearFilters = () => {
-    console.log("🧹 Filtros limpiados");
-    setFilters({});
-    setPage(1);
-  };
-
-  // Filtro local con debounce
-  const debounceRef = useRef(debounce((value, all) => {
-    const lower = value.toLowerCase();
-    setPatients(
-      all.filter(
-        (p) =>
-          p.fullName.toLowerCase().includes(lower) ||
-          String(p.id).includes(lower)
-      )
-    );
-  }, 400));
-
-  const handleSearchInput = (value) => {
-    setSearch(value);
-    debounceRef.current(value, allPatients);
   };
 
   return (
